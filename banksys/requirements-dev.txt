@@ -1,0 +1,9 @@
+# banksys 开发与测试依赖（包含运行时依赖）
+-r requirements.txt
+
+# 测试框架与覆盖率
+pytest>=8.0.0
+pytest-cov>=5.0.0
+# 代码格式化与静态检查
+black>=24.0.0
+ruff>=0.5.0

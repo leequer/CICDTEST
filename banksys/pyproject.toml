@@ -1,0 +1,63 @@
+[project]
+name = "banksys"
+version = "0.1.0"
+description = "银行电话营销客户认购预测：交互式数据探索仪表盘"
+authors = [
+    {name = "leequer"},
+]
+requires-python = ">=3.10"
+dependencies = [
+    "streamlit>=1.36.0",
+    "pandas>=2.0.0",
+    "plotly>=5.20.0",
+    "rich>=13.7.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=5.0.0",
+    "black>=24.0.0",
+    "ruff>=0.5.0",
+]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.black]
+line-length = 88
+target-version = ["py310"]
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  \.git
+  | envbank
+  | build
+  | dist
+  | standards
+)/
+'''
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+# standards 为只读规范目录，不纳入本项目的格式化与检查范围
+extend-exclude = ["envbank", "build", "dist", "standards"]
+
+[tool.ruff.lint]
+# E/W: pycodestyle，F: pyflakes，I: isort
+select = ["E", "W", "F", "I"]
+ignore = ["E203"]
+
+[tool.ruff.lint.per-file-ignores]
+# Streamlit 入口脚本需在导入业务包前注入项目根路径，E402 为既定引导模式
+"src/frontend/dashboard/app.py" = ["E402"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+python_classes = ["Test*"]
+pythonpath = ["."]
+addopts = "-v --strict-markers"

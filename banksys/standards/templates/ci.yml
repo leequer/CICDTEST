@@ -1,0 +1,156 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  IMAGE_NAME: your-app-name
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: 安装 uv
+        run: pip install uv
+
+      - name: 安装依赖（包含 dev）
+        run: uv sync --extra dev
+
+      - name: 代码格式检查 (Black)
+        run: uv run black --check .
+
+      - name: 代码风格检查 (Ruff)
+        run: uv run ruff check .
+
+      - name: 类型检查 (MyPy)
+        run: uv run mypy src/
+        continue-on-error: true
+
+      - name: 运行测试
+        run: uv run pytest tests/ -v --cov=src/ --cov-report=xml
+        continue-on-error: true
+
+      - name: 上传覆盖率报告
+        uses: codecov/codecov-action@v4
+        if: matrix.python-version == '3.11'
+        with:
+          files: ./coverage.xml
+        continue-on-error: true
+
+  cd:
+    needs: ci
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 部署到远程服务器（Docker 方式）
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT }}
+          command_timeout: 30m
+          script: |
+            set -e
+            
+            echo "=========================================="
+            echo "开始 Docker 部署..."
+            echo "=========================================="
+            
+            # 项目目录（修改为你的项目名）
+            PROJECT_DIR="/home/${{ secrets.SSH_USER }}/your-project-name"
+            IMAGE_NAME="your-app-name"
+            CONTAINER_NAME="your-app-name"
+            PORT=6100
+            
+            # 创建目录
+            mkdir -p $PROJECT_DIR
+            
+            # 进入项目目录
+            cd $PROJECT_DIR
+            
+            # 配置 SSH known_hosts
+            mkdir -p ~/.ssh
+            ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
+            
+            # 拉取最新代码
+            echo ">>> 拉取最新代码..."
+            if [ -d ".git" ]; then
+              git fetch --all
+              git reset --hard origin/main
+              git clean -fd
+            else
+              # 修改为你的仓库地址
+              git clone git@github.com:username/repo.git .
+            fi
+            
+            # 显示当前提交
+            echo ">>> 当前代码版本:"
+            git log -1 --oneline
+            
+            # 检查 Dockerfile 是否存在
+            if [ ! -f "Dockerfile" ]; then
+              echo "错误: Dockerfile 不存在"
+              ls -la
+              exit 1
+            fi
+            
+            # 检查 Docker 是否安装
+            if ! command -v docker &> /dev/null; then
+              echo ">>> 安装 Docker..."
+              curl -fsSL https://get.docker.com | sh
+              systemctl start docker
+              systemctl enable docker
+            fi
+            
+            # 构建 Docker 镜像
+            echo ">>> 构建 Docker 镜像..."
+            docker build -t $IMAGE_NAME:latest .
+            
+            # 停止并删除旧容器
+            echo ">>> 停止旧容器..."
+            docker stop $CONTAINER_NAME 2>/dev/null || true
+            docker rm $CONTAINER_NAME 2>/dev/null || true
+            
+            # 启动新容器
+            echo ">>> 启动新容器..."
+            docker run -d \
+              --name $CONTAINER_NAME \
+              --restart unless-stopped \
+              -p $PORT:6100 \
+              $IMAGE_NAME:latest
+            
+            # 等待容器启动
+            sleep 3
+            
+            # 检查容器状态
+            if docker ps | grep -q $CONTAINER_NAME; then
+              echo "=========================================="
+              echo "部署完成！服务已启动"
+              echo "访问地址: http://<服务器IP>:$PORT"
+              echo "查看日志: docker logs $CONTAINER_NAME"
+              echo "=========================================="
+            else
+              echo "错误: 容器启动失败"
+              docker logs $CONTAINER_NAME
+              exit 1
+            fi
