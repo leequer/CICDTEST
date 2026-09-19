@@ -109,10 +109,14 @@ pytest tests/ -v --cov=src --cov-report=term-missing
 - 工作流文件：.github/workflows/banksys-ci.yml（推送到 CICDTEST 后位于仓库根 .github/workflows/）；
 - 触发条件：push/PR 到 main 且变更命中 banksys/**；
 - 步骤：setup-python 3.10 → pip 安装 requirements-dev.txt → black --check → ruff check → pytest --cov（--cov-fail-under=80）；
-- 首次远端运行结果：**待推送后回填**（运行/停止服务类操作需用户确认后执行）。
+- 首次远端运行结果：**已通过（success）**。
+  - 提交：5936f6e（2026-09-19 推送 main），运行 ID 35410374599；
+  - 运行地址：https://github.com/leequer/CICDTEST/actions/runs/35410374599 ；
+  - 6 个步骤全部 success：检出代码 → 设置 Python 3.10 → 安装依赖 → Black → Ruff → pytest（28 测试，覆盖率门槛 80%）；
+  - 同次推送未影响既有 Test CI 工作流（同样 success）。
 
 ---
 
 ## 6. 当前总体状态（大白话）
 
-代码写完了、测试全绿、规范检查零问题、仪表盘在本地用"无头模式"完整跑过一遍训练集和测试集。现在就差两件事：等你点头后推送到 GitHub 触发第一次 CI，以及由你决定是否现在启动仪表盘在浏览器里实际点一点。
+代码写完了，本地 28 个测试全部通过、规范检查零问题，代码也已经推送到 GitHub，CI 第一次跑就全绿。现在只剩一件事需要你拍板：要不要我在本地把仪表盘服务启动起来（streamlit run，默认 http://localhost:8501），让你在浏览器里实际点一点；以及你对 M1 成果的验收意见。
