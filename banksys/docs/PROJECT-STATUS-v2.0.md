@@ -4,7 +4,7 @@
 |---|---|
 | 应用名称 | banksys（CICDTEST 多应用仓库子应用） |
 | 更新日期 | 2026-09-19 |
-| 当前阶段 | M1 数据探索仪表盘已验收；**M2 模型训练开发完成，本地自检全绿，待推送验证 CI 与用户验收** |
+| 当前阶段 | M1 数据探索仪表盘已验收；**M2 模型训练开发完成，本地自检与远端 CI（含 MyPy）全绿，待用户验收** |
 | 本地环境 | Windows + Python 3.10.4 + venv 虚拟环境 `envbank/`（位于 banksys 根目录） |
 | 规范基线 | standards/ 00-09 系列（v2.0 规范文件缺失，见决策 DEC-001） |
 
@@ -22,7 +22,7 @@
 | 4 | 最优先模块 | src/core/model_training/ 模型训练全链路 |
 | 5 | 知识索引是否已加载 | 会话开始时不存在；本次已新建 docs/KNOWLEDGE-INDEX-v2.0.md（含 schema 摘要、模块地图、命令索引） |
 | 6 | 已应用 Lessons 编号 | standards/05 经验 + DEC-001（规范基线）、DEC-002（venv 替代 conda）、DEC-008（duration 泄露隔离）、DEC-013（代理 HTTP/1.1） |
-| 7 | CI/CD 是否 100% | M1 三次运行全绿（Black/Ruff/pytest）；M2 起新增 MyPy 门禁，推送后回填远端结果（只做 CI） |
+| 7 | CI/CD 是否 100% | 是。M1 三次运行全绿；M2 推送（6d73ce5）后 banksys-CI 全绿，Black/Ruff/**MyPy**/pytest 四门禁 + 51 测试均通过（运行 ID 35413301927，只做 CI） |
 | 8 | 项目结构是否干净 | 是；本次仅新增 src/core/model_training/、db/、models/（二进制产物 gitignore）与 M2 测试 |
 | 9 | conda 环境是否就绪 | 机器无 conda；沿用授权后的 envbank（Python 3.10.4 venv），已在其中安装 scikit-learn/xgboost/lightgbm/joblib/mypy |
 | 10 | 当前是否有阻塞 | 无。用户点名的 5 个 v2.0 规范文件仍不存在（Glob 核实），沿用已批准的 DEC-001 基线 |
@@ -155,7 +155,10 @@ M2 自检中发现并已闭环的缺陷：
 - M2 起步骤：setup-python 3.10 → 安装 requirements-dev.txt → Black → Ruff → **MyPy（mypy src）** → pytest --cov（--cov-fail-under=80）；
 - 远端运行历史：
   - M1：5936f6e 首跑 success（运行 ID 35410374599），f27e9da / 5555509 文档提交同样 success；
-  - M2：**待本次推送后回填**。
+  - M2：6d73ce5 推送后 banksys-CI **success**（运行 ID 35413301927，
+    https://github.com/leequer/CICDTEST/actions/runs/35413301927 ）；
+    7 个业务步骤全 success：检出 → Python 3.10 → 安装依赖（含 sklearn/xgboost/lightgbm/mypy）
+    → Black → Ruff → **MyPy** → pytest（51 测试，覆盖率 90%，门槛 80%）；同次 Test CI 同样 success。
 
 ---
 
@@ -166,4 +169,5 @@ M2 的活儿干完了：四种模型（逻辑回归、随机森林、XGBoost、L
 比"所有人都打一遍"多赚约一倍半。最容易出事的"用通话时长作弊"问题已默认封死，对照实验证明封得对。
 
 本地 51 个测试全过、四种规范检查（格式/风格/类型/测试覆盖率 90%）全绿，
-模型文件能直接读取并对没标签的新数据打分。代码还没推送，推完 GitHub CI 会是最后一道确认关。
+模型文件能直接读取并对没标签的新数据打分。代码已推送到 GitHub，远端 CI 含新增的 MyPy 门禁也是一次通过，
+M2 目前只等你验收；M3 做在线预测服务时，这个模型可以直接加载使用。
