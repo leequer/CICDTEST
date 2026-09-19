@@ -11,6 +11,10 @@ dependencies = [
     "pandas>=2.0.0",
     "plotly>=5.20.0",
     "rich>=13.7.0",
+    "scikit-learn>=1.5.0",
+    "xgboost>=2.0.0",
+    "lightgbm>=4.3.0",
+    "joblib>=1.4.0",
 ]
 
 [project.optional-dependencies]
@@ -19,6 +23,7 @@ dev = [
     "pytest-cov>=5.0.0",
     "black>=24.0.0",
     "ruff>=0.5.0",
+    "mypy>=1.10.0",
 ]
 
 [build-system]
@@ -53,6 +58,15 @@ ignore = ["E203"]
 [tool.ruff.lint.per-file-ignores]
 # Streamlit 入口脚本需在导入业务包前注入项目根路径，E402 为既定引导模式
 "src/frontend/dashboard/app.py" = ["E402"]
+
+[tool.mypy]
+python_version = "3.10"
+# 第三方库（streamlit/plotly/lightgbm 等）未提供完整类型存根时按 Any 处理
+ignore_missing_imports = true
+warn_unused_ignores = false
+check_untyped_defs = true
+# 只检查业务源码；测试代码不强制类型
+files = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

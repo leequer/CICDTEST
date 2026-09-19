@@ -18,6 +18,11 @@ htmlcov/
 build/
 dist/
 
+# 模型二进制产物（体积大，由训练流程重新生成；JSON 报告保留入库）
+models/*.joblib
+models/*.pkl
+models/*.bst
+
 # Streamlit 本地密钥
 .streamlit/secrets.toml
 

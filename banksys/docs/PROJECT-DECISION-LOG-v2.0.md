@@ -17,6 +17,13 @@
 | DEC-011 | 2026-09-19 | 测试集无标签，认购类分析显式禁用 | 已确认 |
 | DEC-012 | 2026-09-19 | CI 覆盖率门槛设为 80% | 已确认 |
 | DEC-013 | 2026-09-19 | git 访问 GitHub 采用本地代理 127.0.0.1:31181 + HTTP/1.1 | 已确认 |
+| DEC-014 | 2026-09-19 | M2 机器学习技术栈版本固定（scikit-learn 1.7 / xgboost 3.2 / lightgbm 4.7） | 已确认 |
+| DEC-015 | 2026-09-19 | 不平衡场景以 PR-AUC 为调优/选模型主指标，阈值按 F1 最优选取 | 已确认 |
+| DEC-016 | 2026-09-19 | 类别不平衡处理：类权重 / scale_pos_weight，不做过采样 | 已确认 |
+| DEC-017 | 2026-09-19 | 收益模拟参数为教学占位值（10 元/通，100 元/笔） | 已确认 |
+| DEC-018 | 2026-09-19 | 落盘模型采用三段式流水线，直接接受原始 CSV | 已确认 |
+| DEC-019 | 2026-09-19 | CI 新增 MyPy 类型门禁；logger 重构为类型化 ProjectLogger | 已确认 |
+| DEC-020 | 2026-09-19 | M2 最佳模型选定 XGBoost（PR-AUC 0.5080） | 已确认 |
 
 ---
 
@@ -110,3 +117,45 @@
 - **决策**：git 操作保持全局代理 http://127.0.0.1:31181，并对 github.com 单次追加 `-c http.version=HTTP/1.1`（不修改全局配置、不写入仓库）。
 - **理由**：第 4 次组合（代理 + HTTP/1.1）克隆成功，后续推送同样成功；最小化干预，不安装新工具、不重置网络环境。
 - **影响**：未来在本机对 GitHub 执行 clone/fetch/push 若遇 408/HTTP2 framing 错误，先尝试 `git -c http.version=HTTP/1.1 ...`；Token 仅一次性出现在推送 URL，remote 配置保持无 Token 明文。
+
+## DEC-014 M2 机器学习技术栈版本固定
+
+- **背景**：M2 需要四类候选模型，envbank 初始只有 streamlit/pandas/plotly/rich。
+- **决策**：仅在 envbank 内安装 scikit-learn 1.7.2、xgboost 3.2.0、lightgbm 4.7.0、joblib 1.6.0；requirements.txt 用下限锁定（>=），CI 用 requirements-dev.txt 复装。
+- **理由**：四类模型覆盖线性基线、Bagging、两种主流 Boosting；版本均为 2026-09 兼容 Python 3.10 的稳定 wheel。
+- **影响**：模型产物与这些版本绑定；升级大版本需重跑训练与测试。
+
+## DEC-015 以 PR-AUC 为调优主指标 + F1 最优阈值
+
+- **背景**：正例率仅 13.12%，准确率会被负样本主导；ROC-AUC 在不平衡场景偏乐观。
+- **决策**：GridSearchCV scoring=average_precision（PR-AUC），按测试集 PR-AUC 选最佳模型；决策阈值不固定 0.5，而在 PR 曲线上选 F1 最大点，另对 0.05-0.8 共 9 档做业务收益扫描。
+- **影响**：模型选择与业务阈值解耦；业务方可按成本预算在阈值表上自行取舍。
+
+## DEC-016 类别不平衡采用权重而非过采样
+
+- **决策**：LR/RF 用 class_weight（balanced / balanced_subsample），XGBoost 用 scale_pos_weight=负/正比例，LightGBM 用 is_unbalance；不做 SMOTE 等重采样。
+- **理由**：权重法不改变数据分布、不引入合成样本噪声，与金融营销真实先验一致，流水线更简单可复现。
+
+## DEC-017 收益模拟参数为占位口径
+
+- **背景**：真实外呼坐席成本与定期存款获客收益需要财务口径，当前无法获得。
+- **决策**：cost_per_call=10 元、revenue_per_subscription=100 元，仅用于教学演示，配置在 config.py 且报告中显式标注"待业务校准"。
+- **影响**：收益绝对值不可直接用于经营决策；M3 可将该参数外置为配置。
+
+## DEC-018 落盘模型三段式流水线（原始 CSV 契约）
+
+- **背景**：初版产物只含"OneHot/标准化 + 模型"，对 test.csv 直接预测报缺衍生特征列；若 M3 手工补特征会产生训练/线上两套实现。
+- **决策**：新增 RawFeatureTransformer（BaseEstimator），产物固定为 [features, preprocess, model] 三段 Pipeline，joblib 加载后可直接对原始无标签 CSV predict_proba；并以单元测试锁定该契约。
+- **影响**：M3 预测服务只需 joblib.load + 原始 DataFrame；特征工程规则变更必须重训模型，保证一致性。
+
+## DEC-019 CI 新增 MyPy 门禁
+
+- **背景**：任务要求 CI 覆盖 Ruff + Black + MyPy + pytest；M1 代码从未跑过 mypy。
+- **决策**：pyproject 增加 [tool.mypy]（ignore_missing_imports、check_untyped_defs、仅 src）；修复 M1 两处真实标注缺陷；logger.success 由猴子补丁重构为类型化 ProjectLogger（setLoggerClass + 既有实例补绑）。
+- **影响**：CI 步骤变为 Black → Ruff → MyPy → pytest；首跑结果回填 PROJECT-STATUS 第 5 节。
+
+## DEC-020 M2 最佳模型选定 XGBoost
+
+- **背景**：四模型同口径对比（测试集 4,500 行）：XGBoost PR-AUC=0.5080 最高，RandomForest 0.5025、LightGBM 0.5023、LR 0.4473。
+- **决策**：按 DEC-015 规则选 XGBoost（learning_rate=0.05, max_depth=4, n_estimators=200）为 best_model.joblib；四者差距小，RF/LightGBM 报告留作备选。
+- **影响**：M3 在线预测默认加载该模型；后续若业务数据漂移需按训练报告复评。

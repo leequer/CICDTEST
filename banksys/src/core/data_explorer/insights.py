@@ -100,7 +100,7 @@ class InsightGenerator(IInsightGenerator):
             if rate > 0:
                 unknown_rates[column] = rate
         if unknown_rates:
-            worst_column = max(unknown_rates, key=unknown_rates.get)
+            worst_column = max(unknown_rates, key=lambda col: unknown_rates[col])
             chinese_name = schema.COLUMN_DESCRIPTIONS[worst_column][0]
             items.append(
                 InsightItem(

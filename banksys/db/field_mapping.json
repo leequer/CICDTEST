@@ -1,0 +1,177 @@
+{
+  "版本": "v2.0",
+  "生成时间": "2026-09-19 09:32:49",
+  "目标字段": {
+    "字段名": "subscribe",
+    "编码": {
+      "no": 0,
+      "yes": 1
+    },
+    "说明": "二分类目标，yes=认购定期存款"
+  },
+  "剔除字段": {
+    "id": "记录唯一标识，无业务含义，不参与建模",
+    "duration": "事后特征（通话结束后才可知），默认隔离防泄露（DEC-008）；include_duration=True 时可用于对照实验"
+  },
+  "原始数值字段": {
+    "age": {
+      "中文名": "年龄",
+      "处理方式": "StandardScaler 标准化",
+      "是否进入模型": true
+    },
+    "duration": {
+      "中文名": "通话时长",
+      "处理方式": "StandardScaler 标准化",
+      "是否进入模型": false
+    },
+    "campaign": {
+      "中文名": "本次营销联系次数",
+      "处理方式": "StandardScaler 标准化",
+      "是否进入模型": true
+    },
+    "pdays": {
+      "中文名": "距上次联系天数",
+      "处理方式": "StandardScaler 标准化",
+      "是否进入模型": true
+    },
+    "previous": {
+      "中文名": "历史营销联系次数",
+      "处理方式": "StandardScaler 标准化",
+      "是否进入模型": true
+    },
+    "emp_var_rate": {
+      "中文名": "就业变动率",
+      "处理方式": "StandardScaler 标准化",
+      "是否进入模型": true
+    },
+    "cons_price_index": {
+      "中文名": "消费者价格指数",
+      "处理方式": "StandardScaler 标准化",
+      "是否进入模型": true
+    },
+    "cons_conf_index": {
+      "中文名": "消费者信心指数",
+      "处理方式": "StandardScaler 标准化",
+      "是否进入模型": true
+    },
+    "lending_rate3m": {
+      "中文名": "三个月拆借利率",
+      "处理方式": "StandardScaler 标准化",
+      "是否进入模型": true
+    },
+    "nr_employed": {
+      "中文名": "就业人数",
+      "处理方式": "StandardScaler 标准化",
+      "是否进入模型": true
+    }
+  },
+  "原始分类字段": {
+    "job": {
+      "中文名": "职业",
+      "处理方式": "OneHotEncoder（handle_unknown=ignore）",
+      "是否进入模型": true
+    },
+    "marital": {
+      "中文名": "婚姻状况",
+      "处理方式": "OneHotEncoder（handle_unknown=ignore）",
+      "是否进入模型": true
+    },
+    "education": {
+      "中文名": "受教育程度",
+      "处理方式": "OneHotEncoder（handle_unknown=ignore）",
+      "是否进入模型": true
+    },
+    "default": {
+      "中文名": "是否有违约记录",
+      "处理方式": "OneHotEncoder（handle_unknown=ignore）",
+      "是否进入模型": true
+    },
+    "housing": {
+      "中文名": "是否有住房贷款",
+      "处理方式": "OneHotEncoder（handle_unknown=ignore）",
+      "是否进入模型": true
+    },
+    "loan": {
+      "中文名": "是否有个人贷款",
+      "处理方式": "OneHotEncoder（handle_unknown=ignore）",
+      "是否进入模型": true
+    },
+    "contact": {
+      "中文名": "联系方式",
+      "处理方式": "OneHotEncoder（handle_unknown=ignore）",
+      "是否进入模型": true
+    },
+    "month": {
+      "中文名": "最后联系月份",
+      "处理方式": "OneHotEncoder（handle_unknown=ignore）",
+      "是否进入模型": true
+    },
+    "day_of_week": {
+      "中文名": "最后联系星期",
+      "处理方式": "OneHotEncoder（handle_unknown=ignore）",
+      "是否进入模型": true
+    },
+    "poutcome": {
+      "中文名": "上次营销结果",
+      "处理方式": "OneHotEncoder（handle_unknown=ignore）",
+      "是否进入模型": true
+    }
+  },
+  "衍生特征": {
+    "is_ever_contacted": {
+      "中文名": "是否曾被历史营销联系过（pdays 非 999）",
+      "类型": "binary",
+      "处理方式": "0/1 数值，随数值列标准化"
+    },
+    "is_high_frequency": {
+      "中文名": "本次活动是否高频触达（campaign 达到阈值）",
+      "类型": "binary",
+      "处理方式": "0/1 数值，随数值列标准化"
+    },
+    "was_previous_success": {
+      "中文名": "上次营销是否成功（poutcome=success）",
+      "类型": "binary",
+      "处理方式": "0/1 数值，随数值列标准化"
+    },
+    "contact_cellular": {
+      "中文名": "本次是否通过手机联系（contact=cellular）",
+      "类型": "binary",
+      "处理方式": "0/1 数值，随数值列标准化"
+    },
+    "age_bucket": {
+      "中文名": "年龄分箱（业务可解释分段）",
+      "类型": "categorical",
+      "处理方式": "OneHot 编码"
+    }
+  },
+  "建模特征清单": {
+    "categorical": [
+      "job",
+      "marital",
+      "education",
+      "default",
+      "housing",
+      "loan",
+      "contact",
+      "month",
+      "day_of_week",
+      "poutcome",
+      "age_bucket"
+    ],
+    "numeric": [
+      "age",
+      "campaign",
+      "pdays",
+      "previous",
+      "emp_var_rate",
+      "cons_price_index",
+      "cons_conf_index",
+      "lending_rate3m",
+      "nr_employed",
+      "is_ever_contacted",
+      "is_high_frequency",
+      "was_previous_success",
+      "contact_cellular"
+    ]
+  }
+}

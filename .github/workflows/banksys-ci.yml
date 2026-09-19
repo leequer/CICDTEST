@@ -43,5 +43,8 @@ jobs:
       - name: 代码风格检查（Ruff）
         run: ruff check .
 
+      - name: 类型检查（MyPy）
+        run: mypy src
+
       - name: 运行单元测试与覆盖率（pytest）
         run: pytest tests/ -v --cov=src --cov-report=term-missing --cov-fail-under=80

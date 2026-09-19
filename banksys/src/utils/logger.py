@@ -14,7 +14,9 @@
 from __future__ import annotations
 
 import logging
+import types
 from pathlib import Path
+from typing import cast
 
 from rich.console import Console
 from rich.logging import RichHandler
@@ -27,16 +29,22 @@ SUCCESS_LEVEL = 25
 logging.addLevelName(SUCCESS_LEVEL, "SUCCESS")
 
 
-def _success(
-    self: logging.Logger, message: str, *args: object, **kwargs: object
-) -> None:
-    """以 SUCCESS 级别输出日志。"""
+def _emit_success(self: logging.Logger, message: str, *args: object) -> None:
+    """SUCCESS 级别的实际输出函数（也用于给既有实例动态绑定）。"""
     if self.isEnabledFor(SUCCESS_LEVEL):
-        self._log(SUCCESS_LEVEL, message, args, **kwargs)
+        self._log(SUCCESS_LEVEL, message, args)
 
 
-# 为标准 Logger 注入 success 方法
-logging.Logger.success = _success  # type: ignore[attr-defined]
+class ProjectLogger(logging.Logger):
+    """项目统一日志器：在标准级别上扩展 SUCCESS（加粗绿色）。"""
+
+    def success(self, message: str, *args: object) -> None:
+        """以 SUCCESS 级别输出一条业务成功日志。"""
+        _emit_success(self, message, *args)
+
+
+# 本模块导入后，新建日志器默认即为 ProjectLogger
+logging.setLoggerClass(ProjectLogger)
 
 
 class _ChineseRichHandler(RichHandler):
@@ -79,7 +87,7 @@ class _ColorFormatter(logging.Formatter):
             record.msg = original
 
 
-def setup_logger(name: str = "banksys", level: int = logging.INFO) -> logging.Logger:
+def setup_logger(name: str = "banksys", level: int = logging.INFO) -> ProjectLogger:
     """创建或获取带 rich 彩色输出的日志器。
 
     重复调用同名日志器不会叠加处理器。
@@ -89,19 +97,22 @@ def setup_logger(name: str = "banksys", level: int = logging.INFO) -> logging.Lo
         level: 日志级别，默认 INFO。
 
     Returns:
-        logging.Logger: 配置完成的日志器。
+        ProjectLogger: 配置完成的项目日志器（含 success 方法）。
     """
     logger = logging.getLogger(name)
+    # 兼容本模块导入前已创建的同名标准 Logger：在实例上补绑 success
+    if not isinstance(logger, ProjectLogger):
+        logger.success = types.MethodType(_emit_success, logger)  # type: ignore[attr-defined]
     if not logger.handlers:
         handler = _ChineseRichHandler()
         handler.setFormatter(_ColorFormatter())
         logger.addHandler(handler)
         logger.setLevel(level)
         logger.propagate = False
-    return logger
+    return cast(ProjectLogger, logger)
 
 
-def get_logger(name: str = "banksys") -> logging.Logger:
+def get_logger(name: str = "banksys") -> ProjectLogger:
     """获取项目统一日志器（setup_logger 的语义化别名）。"""
     return setup_logger(name)
 

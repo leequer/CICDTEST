@@ -227,3 +227,69 @@ def data_dir_with_csvs(
     sample_dataframe.to_csv(tmp_path / "train.csv", index=False)
     sample_test_dataframe.to_csv(tmp_path / "test.csv", index=False)
     return tmp_path
+
+
+@pytest.fixture
+def medium_dataframe() -> pd.DataFrame:
+    """构造 240 行带标签规律的合成数据（M2 模型训练测试用）。
+
+    认购标签与 poutcome/month/contact/campaign 强相关，
+    保证模型能在小数据上学到信号；固定随机种子保证可复现。
+    """
+    import numpy as np
+
+    rng = np.random.RandomState(42)
+    jobs = ("admin.", "technician", "retired", "services", "blue-collar", "student")
+    months = ("may", "jul", "aug", "oct", "mar", "dec")
+    rows: list[dict] = []
+    for index in range(240):
+        poutcome = rng.choice(
+            ("success", "failure", "nonexistent"), p=(0.2, 0.25, 0.55)
+        )
+        month = str(rng.choice(months))
+        contact = str(rng.choice(("cellular", "telephone"), p=(0.6, 0.4)))
+        campaign = int(rng.choice((1, 2, 3, 6, 8), p=(0.4, 0.25, 0.15, 0.1, 0.1)))
+
+        # 确定性业务规律 + 少量噪声
+        positive_prob = 0.08
+        if poutcome == "success":
+            positive_prob += 0.45
+        if month in ("mar", "oct", "dec"):
+            positive_prob += 0.2
+        if contact == "cellular":
+            positive_prob += 0.1
+        if campaign >= 6:
+            positive_prob -= 0.15
+        label = "yes" if rng.rand() < positive_prob else "no"
+
+        rows.append(
+            {
+                "id": index + 1,
+                "age": int(rng.randint(20, 70)),
+                "job": str(rng.choice(jobs)),
+                "marital": str(rng.choice(("single", "married", "divorced"))),
+                "education": str(
+                    rng.choice(("basic.9y", "high.school", "university.degree"))
+                ),
+                "default": "no",
+                "housing": str(rng.choice(("yes", "no"))),
+                "loan": "no",
+                "contact": contact,
+                "month": month,
+                "day_of_week": str(rng.choice(("mon", "tue", "wed", "thu", "fri"))),
+                "duration": int(rng.randint(60, 900)),
+                "campaign": campaign,
+                "pdays": (
+                    999 if poutcome == "nonexistent" else int(rng.randint(10, 300))
+                ),
+                "previous": 0 if poutcome == "nonexistent" else int(rng.randint(1, 4)),
+                "poutcome": poutcome,
+                "emp_var_rate": round(float(rng.uniform(-3.0, 1.5)), 1),
+                "cons_price_index": round(float(rng.uniform(92.0, 94.5)), 1),
+                "cons_conf_index": round(float(rng.uniform(-46.0, -35.0)), 1),
+                "lending_rate3m": round(float(rng.uniform(0.8, 4.5)), 2),
+                "nr_employed": round(float(rng.uniform(4950.0, 5230.0)), 1),
+                "subscribe": label,
+            }
+        )
+    return pd.DataFrame(rows, columns=list(schema.ALL_COLUMNS))

@@ -76,8 +76,8 @@ def _chinese_field_name(column: str) -> str:
 
 def _render_sidebar_filters(
     data: pd.DataFrame, data_filter: DataFilter
-) -> FilterCriteria:
-    """在侧边栏渲染所有字段的动态筛选控件，返回 FilterCriteria。"""
+) -> tuple[str, FilterCriteria]:
+    """在侧边栏渲染筛选控件，返回（数据集名称，筛选条件）。"""
     st.sidebar.header("一、数据集选择")
     dataset_name = st.sidebar.radio(
         "选择数据集",
@@ -93,7 +93,7 @@ def _render_sidebar_filters(
     st.sidebar.header("二、动态筛选条件")
     if st.sidebar.button("重置全部筛选条件", width="stretch"):
         for key in list(st.session_state.keys()):
-            if key.startswith("filter_"):
+            if isinstance(key, str) and key.startswith("filter_"):
                 del st.session_state[key]
         st.rerun()
 
